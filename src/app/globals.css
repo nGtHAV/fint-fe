@@ -19,6 +19,10 @@
   --font-mono: var(--font-geist-mono);
 }
 
+html, body{
+  overscroll-behavior: none;
+}
+
 html {
   color-scheme: light;
 }

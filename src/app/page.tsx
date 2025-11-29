@@ -7,7 +7,7 @@ import BottomNav from "@/components/BottomNav";
 import Dashboard from "@/components/Dashboard";
 import Settings from "@/components/Settings";
 import AddReceiptModal from "@/components/AddReceiptModal";
-import { authApi, receiptsApi, Receipt as APIReceipt, CreateReceiptData } from "@/lib/api";
+import { authApi, receiptsApi, Receipt as APIReceipt, CreateReceiptData, getStoredUser, User } from "@/lib/api";
 
 interface Receipt {
   id: string;
@@ -25,6 +25,7 @@ export default function Home() {
   const [receipts, setReceipts] = useState<Receipt[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [user, setUser] = useState<User | null>(null);
 
   // Convert API receipt to frontend receipt format
   const mapReceipt = (r: APIReceipt): Receipt => ({
@@ -62,6 +63,13 @@ export default function Home() {
       router.push("/login");
       return;
     }
+    
+    // Get user from stored data
+    const storedUser = getStoredUser();
+    if (storedUser) {
+      setUser(storedUser);
+    }
+    
     fetchReceipts();
   }, [router, fetchReceipts]);
 
@@ -126,6 +134,7 @@ export default function Home() {
           <Dashboard 
             receipts={receipts} 
             onNavigateToSettings={() => setActiveTab("settings")}
+            userName={user?.name}
           />
         )}
         {activeTab === "settings" && <Settings />}

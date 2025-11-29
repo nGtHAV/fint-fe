@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { 
   User, 
@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 import ComingSoonModal from "./ComingSoonModal";
 import { useTheme } from "./ThemeProvider";
+import { authApi, statsApi, usersApi, getStoredUser, User as UserType } from "@/lib/api";
 import Image from "next/image";
 
 export default function Settings() {
@@ -35,21 +36,62 @@ export default function Settings() {
   const [comingSoonFeature, setComingSoonFeature] = useState("");
   const [selectedLanguage] = useState("English (US)");
   const [selectedCurrency] = useState("USD ($)");
+  const [user, setUser] = useState<UserType | null>(null);
+  const [stats, setStats] = useState({
+    totalReceipts: 0,
+    monthlySpent: 0,
+    categories: 0
+  });
 
-  // Mock user data - in a real app, this would come from your auth context/API
-  const user = {
-    name: "John Doe",
-    email: "john.doe@example.com",
-    avatar: null, // Could be a URL to user's profile picture
-    memberSince: "November 2025",
-    plan: "Premium",
+  useEffect(() => {
+    loadUserData();
+  }, []);
+
+  const loadUserData = async () => {
+    try {
+      // Get stored user first
+      const storedUser = getStoredUser();
+      if (storedUser) {
+        setUser(storedUser);
+      }
+
+      // Fetch fresh user data from API
+      try {
+        const { user: freshUser } = await authApi.getCurrentUser();
+        setUser(freshUser);
+      } catch (error) {
+        console.error("Failed to fetch user:", error);
+      }
+
+      // Fetch stats
+      try {
+        const statsData = await statsApi.getSummary();
+        setStats({
+          totalReceipts: statsData.total_receipts,
+          monthlySpent: statsData.monthly_spent,
+          categories: statsData.categories?.length || 0
+        });
+      } catch (error) {
+        console.error("Failed to fetch stats:", error);
+      }
+    } finally {
+      // Loading complete
+    }
   };
 
   const handleLogout = () => {
-    // Clear any stored data
-    localStorage.removeItem("user");
-    // Redirect to login
+    authApi.logout();
     router.push("/login");
+  };
+
+  const handleDeleteAccount = async () => {
+    try {
+      await usersApi.deleteAccount();
+      authApi.logout();
+      router.push("/login");
+    } catch (error) {
+      console.error("Failed to delete account:", error);
+    }
   };
 
   const handleExportData = () => {
@@ -63,6 +105,12 @@ export default function Settings() {
   const showComingSoonModal = (feature: string) => {
     setComingSoonFeature(feature);
     setShowComingSoon(true);
+  };
+
+  const formatMemberSince = (dateString?: string) => {
+    if (!dateString) return "Recently";
+    const date = new Date(dateString);
+    return date.toLocaleDateString("en-US", { month: "long", year: "numeric" });
   };
 
   const settingsGroups = [
@@ -109,16 +157,18 @@ export default function Settings() {
         <div className="flex flex-col items-center text-center">
           {/* Profile Picture */}
           <div className="relative mb-4">
-            {user.avatar ? (
+            {user?.avatar_url ? (
               <Image
-                src={user.avatar}
-                alt={user.name}
+                src={user.avatar_url}
+                alt={user.name || "User"}
+                width={96}
+                height={96}
                 className="w-24 h-24 rounded-full object-cover border-4 border-white/30"
               />
             ) : (
               <div className="w-24 h-24 rounded-full bg-white/20 flex items-center justify-center border-4 border-white/30">
                 <span className="text-3xl font-bold">
-                  {user.name.split(" ").map(n => n[0]).join("")}
+                  {user?.name?.split(" ").map(n => n[0]).join("") || "?"}
                 </span>
               </div>
             )}
@@ -128,17 +178,17 @@ export default function Settings() {
           </div>
 
           {/* User Name */}
-          <h2 className="text-xl font-bold mb-1">{user.name}</h2>
-          <p className="text-white/80 text-sm mb-3">{user.email}</p>
+          <h2 className="text-xl font-bold mb-1">{user?.name || "User"}</h2>
+          <p className="text-white/80 text-sm mb-3">{user?.email || ""}</p>
 
           {/* User Stats */}
-          <div className="flex items-center gap-4 text-sm">
+          <div className="flex flex-wrap items-center justify-center gap-2 text-sm">
             <div className="flex items-center gap-1 bg-white/20 px-3 py-1 rounded-full">
               <Calendar className="w-4 h-4" />
-              <span>Member since {user.memberSince}</span>
+              <span>Member since {formatMemberSince(user?.created_at)}</span>
             </div>
             <div className="bg-yellow-400 text-yellow-900 px-3 py-1 rounded-full font-medium">
-              {user.plan}
+              Free Plan
             </div>
           </div>
         </div>
@@ -147,15 +197,15 @@ export default function Settings() {
       {/* Quick Stats */}
       <div className="grid grid-cols-3 gap-4 mb-6">
         <div className="bg-white dark:bg-gray-800 rounded-xl p-4 text-center shadow-sm border border-gray-200 dark:border-gray-700">
-          <p className="text-2xl font-bold text-gray-900 dark:text-white">156</p>
+          <p className="text-2xl font-bold text-gray-900 dark:text-white">{stats.totalReceipts}</p>
           <p className="text-xs text-gray-500 dark:text-gray-400">Receipts</p>
         </div>
         <div className="bg-white dark:bg-gray-800 rounded-xl p-4 text-center shadow-sm border border-gray-200 dark:border-gray-700">
-          <p className="text-2xl font-bold text-gray-900 dark:text-white">$2.4k</p>
+          <p className="text-2xl font-bold text-gray-900 dark:text-white">${stats.monthlySpent.toFixed(0)}</p>
           <p className="text-xs text-gray-500 dark:text-gray-400">This Month</p>
         </div>
         <div className="bg-white dark:bg-gray-800 rounded-xl p-4 text-center shadow-sm border border-gray-200 dark:border-gray-700">
-          <p className="text-2xl font-bold text-gray-900 dark:text-white">8</p>
+          <p className="text-2xl font-bold text-gray-900 dark:text-white">{stats.categories}</p>
           <p className="text-xs text-gray-500 dark:text-gray-400">Categories</p>
         </div>
       </div>
@@ -269,7 +319,7 @@ export default function Settings() {
                   Cancel
                 </button>
                 <button
-                  onClick={() => { setShowDeleteModal(false); router.push("/login"); }}
+                  onClick={handleDeleteAccount}
                   className="flex-1 py-3 bg-red-600 hover:bg-red-700 text-white rounded-xl transition-colors font-medium"
                 >
                   Delete

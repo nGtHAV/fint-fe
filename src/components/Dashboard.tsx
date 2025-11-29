@@ -1,6 +1,7 @@
 "use client";
 
 import { TrendingUp, TrendingDown, Receipt, DollarSign } from "lucide-react";
+import { useRouter } from "next/navigation";
 import Header from "./Header";
 import PieChart, { getCategoryColor } from "./PieChart";
 
@@ -16,9 +17,11 @@ interface ReceiptItem {
 interface DashboardProps {
   receipts: ReceiptItem[];
   onNavigateToSettings: () => void;
+  userName?: string;
 }
 
-export default function Dashboard({ receipts, onNavigateToSettings }: DashboardProps) {
+export default function Dashboard({ receipts, onNavigateToSettings, userName = "User" }: DashboardProps) {
+  const router = useRouter();
   const totalSpent = receipts.reduce((sum, r) => sum + r.amount, 0);
   const thisMonth = receipts.filter((r) => {
     const receiptDate = new Date(r.date);
@@ -45,56 +48,65 @@ export default function Dashboard({ receipts, onNavigateToSettings }: DashboardP
     <div className="p-4 md:p-8">
       <Header 
         title="Dashboard" 
-        userName="John Doe"
+        userName={userName}
         onProfileClick={onNavigateToSettings}
       />
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-gray-200 dark:border-gray-700">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 mb-8">
+        <button 
+          onClick={() => router.push("/spending")}
+          className="bg-white dark:bg-gray-800 rounded-xl p-4 md:p-6 shadow-sm border border-gray-200 dark:border-gray-700 text-left hover:shadow-md transition-shadow cursor-pointer"
+        >
           <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-500 dark:text-gray-400">Total Spent</p>
-              <p className="text-2xl font-bold text-gray-900 dark:text-white">${totalSpent.toFixed(2)}</p>
+            <div className="min-w-0 flex-1">
+              <p className="text-xs md:text-sm text-gray-500 dark:text-gray-400">Total Spent</p>
+              <p className="text-lg md:text-2xl font-bold text-gray-900 dark:text-white truncate">${totalSpent.toFixed(2)}</p>
             </div>
-            <div className="w-12 h-12 bg-emerald-100 dark:bg-emerald-900/30 rounded-full flex items-center justify-center">
-              <DollarSign className="text-emerald-600 dark:text-emerald-400" size={24} />
+            <div className="w-10 h-10 md:w-12 md:h-12 bg-emerald-100 dark:bg-emerald-900/30 rounded-full flex items-center justify-center flex-shrink-0 ml-2">
+              <DollarSign className="text-emerald-600 dark:text-emerald-400 w-5 h-5 md:w-6 md:h-6" />
             </div>
           </div>
-        </div>
+        </button>
 
-        <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-gray-200 dark:border-gray-700">
+        <button 
+          onClick={() => router.push("/spending?filter=month")}
+          className="bg-white dark:bg-gray-800 rounded-xl p-4 md:p-6 shadow-sm border border-gray-200 dark:border-gray-700 text-left hover:shadow-md transition-shadow cursor-pointer"
+        >
           <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-500 dark:text-gray-400">This Month</p>
-              <p className="text-2xl font-bold text-gray-900 dark:text-white">${monthlySpent.toFixed(2)}</p>
+            <div className="min-w-0 flex-1">
+              <p className="text-xs md:text-sm text-gray-500 dark:text-gray-400">This Month</p>
+              <p className="text-lg md:text-2xl font-bold text-gray-900 dark:text-white truncate">${monthlySpent.toFixed(2)}</p>
             </div>
-            <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center">
-              <TrendingUp className="text-blue-600 dark:text-blue-400" size={24} />
+            <div className="w-10 h-10 md:w-12 md:h-12 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center flex-shrink-0 ml-2">
+              <TrendingUp className="text-blue-600 dark:text-blue-400 w-5 h-5 md:w-6 md:h-6" />
             </div>
           </div>
-        </div>
+        </button>
 
-        <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-gray-200 dark:border-gray-700">
+        <button 
+          onClick={() => router.push("/receipts")}
+          className="bg-white dark:bg-gray-800 rounded-xl p-4 md:p-6 shadow-sm border border-gray-200 dark:border-gray-700 text-left hover:shadow-md transition-shadow cursor-pointer"
+        >
           <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-500 dark:text-gray-400">Total Receipts</p>
-              <p className="text-2xl font-bold text-gray-900 dark:text-white">{receipts.length}</p>
+            <div className="min-w-0 flex-1">
+              <p className="text-xs md:text-sm text-gray-500 dark:text-gray-400">Total Receipts</p>
+              <p className="text-lg md:text-2xl font-bold text-gray-900 dark:text-white">{receipts.length}</p>
             </div>
-            <div className="w-12 h-12 bg-purple-100 dark:bg-purple-900/30 rounded-full flex items-center justify-center">
-              <Receipt className="text-purple-600 dark:text-purple-400" size={24} />
+            <div className="w-10 h-10 md:w-12 md:h-12 bg-purple-100 dark:bg-purple-900/30 rounded-full flex items-center justify-center flex-shrink-0 ml-2">
+              <Receipt className="text-purple-600 dark:text-purple-400 w-5 h-5 md:w-6 md:h-6" />
             </div>
           </div>
-        </div>
+        </button>
 
-        <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-gray-200 dark:border-gray-700">
+        <div className="bg-white dark:bg-gray-800 rounded-xl p-4 md:p-6 shadow-sm border border-gray-200 dark:border-gray-700">
           <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-500 dark:text-gray-400">Top Category</p>
-              <p className="text-2xl font-bold text-gray-900 dark:text-white">{topCategory?.[0] || "N/A"}</p>
+            <div className="min-w-0 flex-1">
+              <p className="text-xs md:text-sm text-gray-500 dark:text-gray-400">Top Category</p>
+              <p className="text-lg md:text-2xl font-bold text-gray-900 dark:text-white truncate">{topCategory?.[0] || "N/A"}</p>
             </div>
-            <div className="w-12 h-12 bg-orange-100 dark:bg-orange-900/30 rounded-full flex items-center justify-center">
-              <TrendingDown className="text-orange-600 dark:text-orange-400" size={24} />
+            <div className="w-10 h-10 md:w-12 md:h-12 bg-orange-100 dark:bg-orange-900/30 rounded-full flex items-center justify-center flex-shrink-0 ml-2">
+              <TrendingDown className="text-orange-600 dark:text-orange-400 w-5 h-5 md:w-6 md:h-6" />
             </div>
           </div>
         </div>

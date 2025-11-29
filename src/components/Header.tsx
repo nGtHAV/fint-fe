@@ -65,7 +65,7 @@ export default function Header({ title, userName = "John Doe", onProfileClick }:
         {/* Profile */}
         <button
           onClick={onProfileClick}
-          className="flex items-center gap-2 p-1 pr-3 rounded-full bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+          className="flex items-center gap-2 p-1 sm:pr-3 rounded-full bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
           aria-label="Go to profile"
         >
           <div className="w-8 h-8 rounded-full bg-emerald-500 flex items-center justify-center text-white font-medium text-sm">

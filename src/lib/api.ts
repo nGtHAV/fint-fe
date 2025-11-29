@@ -2,7 +2,20 @@
  * API Service for Fint Backend
  */
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://192.168.100.71:5000';
+const DEFAULT_API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.fint.ngthav.xyz';
+const API_URL_KEY = 'fint_api_url';
+
+// Get/Set API URL
+export const getApiUrl = (): string => {
+  if (typeof window === 'undefined') return DEFAULT_API_URL;
+  return localStorage.getItem(API_URL_KEY) || DEFAULT_API_URL;
+};
+
+export const setApiUrl = (url: string): void => {
+  localStorage.setItem(API_URL_KEY, url);
+};
+
+export const getDefaultApiUrl = (): string => DEFAULT_API_URL;
 
 // Types
 export interface User {
@@ -77,6 +90,7 @@ async function apiRequest<T>(
   options: RequestInit = {}
 ): Promise<T> {
   const token = getToken();
+  const apiUrl = getApiUrl();
   
   const headers: HeadersInit = {
     'Content-Type': 'application/json',
@@ -87,7 +101,7 @@ async function apiRequest<T>(
     (headers as Record<string, string>)['Authorization'] = `Bearer ${token}`;
   }
 
-  const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+  const response = await fetch(`${apiUrl}${endpoint}`, {
     ...options,
     headers,
   });

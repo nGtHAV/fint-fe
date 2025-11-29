@@ -3,14 +3,16 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Eye, EyeOff, Mail, Lock, User, Sun, Moon } from "lucide-react";
-import { authApi } from "@/lib/api";
+import { Eye, EyeOff, Mail, Lock, User, Sun, Moon, Server, X } from "lucide-react";
+import { authApi, getApiUrl, setApiUrl } from "@/lib/api";
 
 export default function RegisterPage() {
   const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(false);
+  const [showServerModal, setShowServerModal] = useState(false);
+  const [serverUrl, setServerUrl] = useState("");
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -26,6 +28,9 @@ export default function RegisterPage() {
       router.push("/");
       return;
     }
+
+    // Load current server URL
+    setServerUrl(getApiUrl());
 
     // Check for saved theme preference or system preference
     const savedTheme = localStorage.getItem("theme");
@@ -45,6 +50,13 @@ export default function RegisterPage() {
     } else {
       document.documentElement.classList.add("dark");
       localStorage.setItem("theme", "dark");
+    }
+  };
+
+  const handleSaveServer = () => {
+    if (serverUrl.trim()) {
+      setApiUrl(serverUrl.trim());
+      setShowServerModal(false);
     }
   };
 
@@ -78,6 +90,15 @@ export default function RegisterPage() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-950 px-4 py-8 relative">
+      {/* Server URL Button */}
+      <button
+        onClick={() => setShowServerModal(true)}
+        className="absolute top-4 left-4 p-3 rounded-full bg-white dark:bg-gray-800 shadow-lg border border-gray-200 dark:border-gray-700 hover:scale-105 transition-transform cursor-pointer"
+        aria-label="Change server URL"
+      >
+        <Server className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+      </button>
+
       {/* Dark Mode Toggle */}
       <button
         onClick={toggleDarkMode}
@@ -280,6 +301,43 @@ export default function RegisterPage() {
           </p>
         </div>
       </div>
+
+      {/* Server URL Modal */}
+      {showServerModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setShowServerModal(false)} />
+          <div className="relative bg-white dark:bg-gray-800 rounded-2xl shadow-xl w-full max-w-sm animate-scale-in p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-bold text-gray-900 dark:text-white">Server Settings</h2>
+              <button 
+                onClick={() => setShowServerModal(false)} 
+                className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full cursor-pointer"
+              >
+                <X size={20} className="text-gray-500" />
+              </button>
+            </div>
+            <p className="text-gray-500 dark:text-gray-400 mb-4 text-sm">
+              Enter the backend server URL to connect to.
+            </p>
+            <div className="relative mb-4">
+              <Server className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
+              <input
+                type="url"
+                value={serverUrl}
+                onChange={(e) => setServerUrl(e.target.value)}
+                placeholder="http://localhost:5000"
+                className="w-full pl-10 pr-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition-all"
+              />
+            </div>
+            <button
+              onClick={handleSaveServer}
+              className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-medium transition-colors cursor-pointer"
+            >
+              Save Server URL
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
