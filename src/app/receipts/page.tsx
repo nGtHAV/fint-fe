@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Receipt, Search, Trash2 } from "lucide-react";
 import { receiptsApi, authApi, Receipt as ReceiptType } from "@/lib/api";
+import { getCategoryConfig } from "@/lib/categoryIcons";
 
 export default function ReceiptsPage() {
   const router = useRouter();
@@ -129,34 +130,39 @@ export default function ReceiptsPage() {
           </div>
         ) : (
           <div className="space-y-3">
-            {filteredReceipts.map((receipt) => (
-              <div
-                key={receipt.id}
-                className="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm border border-gray-200 dark:border-gray-700"
-              >
-                <div className="flex items-center gap-4">
-                  <div className="w-14 h-14 bg-emerald-100 dark:bg-emerald-900/30 rounded-lg flex items-center justify-center">
-                    <Receipt className="w-6 h-6 text-emerald-600 dark:text-emerald-400" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium text-gray-900 dark:text-white truncate">{receipt.name}</p>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">{receipt.category}</p>
-                    <p className="text-xs text-gray-400 dark:text-gray-500">
-                      {new Date(receipt.date).toLocaleDateString()}
-                    </p>
-                  </div>
-                  <div className="text-right">
-                    <p className="font-semibold text-gray-900 dark:text-white">${receipt.amount.toFixed(2)}</p>
-                    <button
-                      onClick={() => setShowDeleteModal(receipt.id)}
-                      className="mt-2 p-1.5 rounded-full hover:bg-red-50 dark:hover:bg-red-900/20 text-red-500 transition-colors"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
+            {filteredReceipts.map((receipt) => {
+              const categoryConf = getCategoryConfig(receipt.category);
+              const CategoryIcon = categoryConf.icon;
+              
+              return (
+                <div
+                  key={receipt.id}
+                  className="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm border border-gray-200 dark:border-gray-700"
+                >
+                  <div className="flex items-center gap-4">
+                    <div className={`w-14 h-14 ${categoryConf.bgColor} ${categoryConf.darkBgColor} rounded-lg flex items-center justify-center`}>
+                      <CategoryIcon className={`w-6 h-6 ${categoryConf.color}`} />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-gray-900 dark:text-white truncate">{receipt.name}</p>
+                      <p className="text-sm text-gray-500 dark:text-gray-400">{receipt.category}</p>
+                      <p className="text-xs text-gray-400 dark:text-gray-500">
+                        {new Date(receipt.date).toLocaleDateString()}
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-semibold text-gray-900 dark:text-white">${receipt.amount.toFixed(2)}</p>
+                      <button
+                        onClick={() => setShowDeleteModal(receipt.id)}
+                        className="mt-2 p-1.5 rounded-full hover:bg-red-50 dark:hover:bg-red-900/20 text-red-500 transition-colors"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>

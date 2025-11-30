@@ -4,6 +4,7 @@ import { TrendingUp, TrendingDown, Receipt, DollarSign } from "lucide-react";
 import { useRouter } from "next/navigation";
 import Header from "./Header";
 import PieChart, { getCategoryColor } from "./PieChart";
+import { getCategoryConfig } from "@/lib/categoryIcons";
 
 interface ReceiptItem {
   id: string;
@@ -159,21 +160,26 @@ export default function Dashboard({ receipts, onNavigateToSettings, userName = "
                 <p>No receipts yet. Add your first receipt to get started!</p>
               </div>
             ) : (
-              receipts.slice(0, 5).map((receipt) => (
-                <div key={receipt.id} className="p-4 flex items-center gap-4 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
-                  <div className="w-12 h-12 bg-emerald-100 dark:bg-emerald-900/30 rounded-lg flex items-center justify-center">
-                    <Receipt className="text-emerald-600 dark:text-emerald-400" size={20} />
+              receipts.slice(0, 5).map((receipt) => {
+                const categoryConf = getCategoryConfig(receipt.category);
+                const CategoryIcon = categoryConf.icon;
+                
+                return (
+                  <div key={receipt.id} className="p-4 flex items-center gap-4 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
+                    <div className={`w-12 h-12 ${categoryConf.bgColor} ${categoryConf.darkBgColor} rounded-lg flex items-center justify-center`}>
+                      <CategoryIcon className={`${categoryConf.color}`} size={20} />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-gray-900 dark:text-white truncate">{receipt.name}</p>
+                      <p className="text-sm text-gray-500 dark:text-gray-400">{receipt.category}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-semibold text-gray-900 dark:text-white">${receipt.amount.toFixed(2)}</p>
+                      <p className="text-sm text-gray-500 dark:text-gray-400">{new Date(receipt.date).toLocaleDateString()}</p>
+                    </div>
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium text-gray-900 dark:text-white truncate">{receipt.name}</p>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">{receipt.category}</p>
-                  </div>
-                  <div className="text-right">
-                    <p className="font-semibold text-gray-900 dark:text-white">${receipt.amount.toFixed(2)}</p>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">{new Date(receipt.date).toLocaleDateString()}</p>
-                  </div>
-                </div>
-              ))
+                );
+              })
             )}
           </div>
         </div>
