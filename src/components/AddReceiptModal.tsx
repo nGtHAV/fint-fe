@@ -1,16 +1,16 @@
 "use client";
 
-import { useState, useRef, useCallback, useEffect } from "react";
+import { useState, useRef } from "react";
 import {
   X,
   Camera,
-  Upload,
   RotateCcw,
   Check,
   Loader2,
   Sparkles,
   AlertCircle,
   Edit3,
+  ImageIcon,
 } from "lucide-react";
 import Image from "next/image";
 import { ocrApi, OCRResult } from "@/lib/api";
@@ -27,7 +27,7 @@ interface AddReceiptModalProps {
   }) => void;
 }
 
-type Step = "capture" | "camera" | "preview" | "processing" | "edit";
+type Step = "capture" | "preview" | "processing" | "edit";
 
 export default function AddReceiptModal({
   isOpen,
@@ -42,15 +42,12 @@ export default function AddReceiptModal({
     category: "Food & Dining",
     date: new Date().toISOString().split("T")[0],
   });
-  const [cameraError, setCameraError] = useState<string | null>(null);
   const [processingError, setProcessingError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [ocrResult, setOcrResult] = useState<OCRResult | null>(null);
 
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const streamRef = useRef<MediaStream | null>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
+  const galleryInputRef = useRef<HTMLInputElement>(null);
 
   const categories = [
     "Food & Dining",
@@ -63,76 +60,19 @@ export default function AddReceiptModal({
     "Other",
   ];
 
-  // Stop camera stream
-  const stopCamera = useCallback(() => {
-    if (streamRef.current) {
-      streamRef.current.getTracks().forEach((track) => track.stop());
-      streamRef.current = null;
-    }
-  }, []);
-
-  // Start camera - FULL SCREEN
-  const startCamera = useCallback(async () => {
-    setCameraError(null);
-    setStep("camera");
-
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: {
-          facingMode: "environment",
-          width: { ideal: 1920 },
-          height: { ideal: 1080 },
-        },
-      });
-
-      streamRef.current = stream;
-
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        await videoRef.current.play();
-      }
-    } catch (err) {
-      console.error("Camera error:", err);
-      setCameraError(
-        err instanceof Error
-          ? err.message
-          : "Unable to access camera. Please check permissions."
-      );
-      setStep("capture");
-    }
-  }, []);
-
-  // Capture photo from camera
-  const capturePhoto = useCallback(() => {
-    if (!videoRef.current || !canvasRef.current) return;
-
-    const video = videoRef.current;
-    const canvas = canvasRef.current;
-
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
-
-    const ctx = canvas.getContext("2d");
-    if (ctx) {
-      ctx.drawImage(video, 0, 0);
-      const imageData = canvas.toDataURL("image/jpeg", 0.8);
-      setImagePreview(imageData);
-      stopCamera();
-      setStep("preview"); // Go to preview step instead of form
-    }
-  }, [stopCamera]);
-
-  // Handle file upload
+  // Handle file selection (from camera or gallery)
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
       const reader = new FileReader();
       reader.onloadend = () => {
         setImagePreview(reader.result as string);
-        setStep("preview"); // Go to preview step
+        setStep("preview");
       };
       reader.readAsDataURL(file);
     }
+    // Reset input so same file can be selected again
+    e.target.value = "";
   };
 
   // Process image with AI OCR
@@ -209,11 +149,9 @@ export default function AddReceiptModal({
   };
 
   // Reset and close modal
-  const handleClose = useCallback(() => {
-    stopCamera();
+  const handleClose = () => {
     setStep("capture");
     setImagePreview(null);
-    setCameraError(null);
     setProcessingError(null);
     setOcrResult(null);
     setFormData({
@@ -223,14 +161,7 @@ export default function AddReceiptModal({
       date: new Date().toISOString().split("T")[0],
     });
     onClose();
-  }, [stopCamera, onClose]);
-
-  // Cleanup on unmount
-  useEffect(() => {
-    return () => {
-      stopCamera();
-    };
-  }, [stopCamera]);
+  };
 
   const skipImage = () => {
     setFormData({
@@ -243,7 +174,6 @@ export default function AddReceiptModal({
   };
 
   const goBack = () => {
-    stopCamera();
     setImagePreview(null);
     setOcrResult(null);
     setProcessingError(null);
@@ -252,73 +182,12 @@ export default function AddReceiptModal({
 
   const retakePhoto = () => {
     setImagePreview(null);
-    startCamera();
+    setStep("capture");
   };
 
   if (!isOpen) return null;
 
-  // Full screen camera view
-  if (step === "camera") {
-    return (
-      <div className="fixed inset-0 z-50 bg-black">
-        <video
-          ref={videoRef}
-          autoPlay
-          playsInline
-          muted
-          className="w-full h-full object-cover"
-        />
-        <canvas ref={canvasRef} className="hidden" />
-
-        {/* Camera overlay with guide */}
-        <div className="absolute inset-0 pointer-events-none">
-          {/* Receipt guide frame */}
-          <div className="absolute inset-8 sm:inset-16 md:inset-24 border-2 border-white/60 rounded-2xl">
-            <div className="absolute -top-8 left-1/2 -translate-x-1/2 text-white text-sm bg-black/50 px-3 py-1 rounded-full">
-              Align receipt within frame
-            </div>
-          </div>
-
-          {/* Corner markers */}
-          <div className="absolute top-8 left-8 sm:top-16 sm:left-16 md:top-24 md:left-24 w-8 h-8 border-t-4 border-l-4 border-emerald-400 rounded-tl-lg" />
-          <div className="absolute top-8 right-8 sm:top-16 sm:right-16 md:top-24 md:right-24 w-8 h-8 border-t-4 border-r-4 border-emerald-400 rounded-tr-lg" />
-          <div className="absolute bottom-8 left-8 sm:bottom-16 sm:left-16 md:bottom-24 md:left-24 w-8 h-8 border-b-4 border-l-4 border-emerald-400 rounded-bl-lg" />
-          <div className="absolute bottom-8 right-8 sm:bottom-16 sm:right-16 md:bottom-24 md:right-24 w-8 h-8 border-b-4 border-r-4 border-emerald-400 rounded-br-lg" />
-        </div>
-
-        {/* Close button */}
-        <button
-          onClick={handleClose}
-          className="absolute top-4 left-4 p-3 bg-black/50 hover:bg-black/70 rounded-full transition-colors z-10"
-        >
-          <X className="text-white" size={24} />
-        </button>
-
-        {/* Camera controls */}
-        <div className="absolute bottom-0 left-0 right-0 p-8 pb-[max(2rem,env(safe-area-inset-bottom))] bg-gradient-to-t from-black/80 via-black/40 to-transparent">
-          <div className="flex items-center justify-center gap-12">
-            <button
-              onClick={goBack}
-              className="p-4 bg-white/20 hover:bg-white/30 rounded-full transition-colors"
-            >
-              <RotateCcw className="text-white" size={28} />
-            </button>
-            <button
-              onClick={capturePhoto}
-              className="w-20 h-20 bg-white rounded-full flex items-center justify-center hover:scale-105 active:scale-95 transition-transform shadow-xl"
-            >
-              <div className="w-16 h-16 bg-emerald-500 rounded-full flex items-center justify-center">
-                <Camera className="text-white" size={32} />
-              </div>
-            </button>
-            <div className="w-16" /> {/* Spacer for balance */}
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // Preview step - show captured photo
+  // Preview step - show captured/selected photo
   if (step === "preview") {
     return (
       <div className="fixed inset-0 z-50 bg-black flex flex-col">
@@ -470,15 +339,26 @@ export default function AddReceiptModal({
         <div className="overflow-y-auto max-h-[calc(90vh-80px)]">
           {step === "capture" && (
             <div className="p-6 space-y-4">
-              {cameraError && (
-                <div className="p-4 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded-xl text-sm flex items-center gap-2">
-                  <AlertCircle size={20} />
-                  {cameraError}
-                </div>
-              )}
+              {/* Hidden file inputs */}
+              <input
+                ref={cameraInputRef}
+                type="file"
+                accept="image/*"
+                capture="environment"
+                onChange={handleFileChange}
+                className="hidden"
+              />
+              <input
+                ref={galleryInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handleFileChange}
+                className="hidden"
+              />
 
+              {/* Take Photo - opens system camera */}
               <button
-                onClick={startCamera}
+                onClick={() => cameraInputRef.current?.click()}
                 className="w-full flex items-center gap-4 p-4 bg-emerald-50 dark:bg-emerald-900/20 hover:bg-emerald-100 dark:hover:bg-emerald-900/30 rounded-xl transition-colors border-2 border-dashed border-emerald-300 dark:border-emerald-700"
               >
                 <div className="w-12 h-12 bg-emerald-100 dark:bg-emerald-800 rounded-full flex items-center justify-center">
@@ -492,41 +372,35 @@ export default function AddReceiptModal({
                     Take a Photo
                   </p>
                   <p className="text-sm text-gray-500 dark:text-gray-400">
-                    Capture receipt with AI scanning
+                    Open camera to capture receipt
                   </p>
                 </div>
                 <Sparkles className="text-emerald-500" size={20} />
               </button>
 
+              {/* Upload from Gallery */}
               <button
-                onClick={() => fileInputRef.current?.click()}
+                onClick={() => galleryInputRef.current?.click()}
                 className="w-full flex items-center gap-4 p-4 bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/30 rounded-xl transition-colors border-2 border-dashed border-blue-300 dark:border-blue-700"
               >
                 <div className="w-12 h-12 bg-blue-100 dark:bg-blue-800 rounded-full flex items-center justify-center">
-                  <Upload
+                  <ImageIcon
                     className="text-blue-600 dark:text-blue-400"
                     size={24}
                   />
                 </div>
                 <div className="text-left flex-1">
                   <p className="font-medium text-gray-900 dark:text-white">
-                    Upload Photo
+                    Choose from Gallery
                   </p>
                   <p className="text-sm text-gray-500 dark:text-gray-400">
-                    Choose from gallery
+                    Select an existing photo
                   </p>
                 </div>
                 <Sparkles className="text-blue-500" size={20} />
               </button>
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*"
-                capture="environment"
-                onChange={handleFileChange}
-                className="hidden"
-              />
 
+              {/* Manual Entry */}
               <button
                 onClick={skipImage}
                 className="w-full flex items-center gap-4 p-4 bg-gray-50 dark:bg-gray-700/50 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-xl transition-colors"
