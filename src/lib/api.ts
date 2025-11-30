@@ -2,8 +2,8 @@
  * API Service for Fint Backend
  */
 
-const DEFAULT_API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.fint.ngthav.xyz';
-const DEFAULT_AI_URL = process.env.NEXT_PUBLIC_AI_URL || 'https://ai.fint.ngthav.xyz';
+const DEFAULT_API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://apifint.ngthav.xyz';
+const DEFAULT_AI_URL = process.env.NEXT_PUBLIC_AI_URL || 'https://aifint.ngthav.xyz';
 const API_URL_KEY = 'fint_api_url';
 const AI_URL_KEY = 'fint_ai_url';
 
