@@ -3,8 +3,8 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Eye, EyeOff, Mail, Lock, Sun, Moon, X, Server } from "lucide-react";
-import { authApi, getApiUrl, setApiUrl } from "@/lib/api";
+import { Eye, EyeOff, Mail, Lock, Sun, Moon, X, Server, Bot } from "lucide-react";
+import { authApi, getApiUrl, setApiUrl, getAiUrl, setAiUrl } from "@/lib/api";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -13,6 +13,7 @@ export default function LoginPage() {
   const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [showServerModal, setShowServerModal] = useState(false);
   const [serverUrl, setServerUrl] = useState("");
+  const [aiServerUrl, setAiServerUrl] = useState("");
   const [resetEmail, setResetEmail] = useState("");
   const [resetSent, setResetSent] = useState(false);
   const [formData, setFormData] = useState({
@@ -29,8 +30,9 @@ export default function LoginPage() {
       return;
     }
 
-    // Load current server URL
+    // Load current server URLs
     setServerUrl(getApiUrl());
+    setAiServerUrl(getAiUrl());
 
     // Check for saved theme preference or system preference
     const savedTheme = localStorage.getItem("theme");
@@ -56,8 +58,11 @@ export default function LoginPage() {
   const handleSaveServer = () => {
     if (serverUrl.trim()) {
       setApiUrl(serverUrl.trim());
-      setShowServerModal(false);
     }
+    if (aiServerUrl.trim()) {
+      setAiUrl(aiServerUrl.trim());
+    }
+    setShowServerModal(false);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -319,24 +324,46 @@ export default function LoginPage() {
                 <X size={20} className="text-gray-500" />
               </button>
             </div>
-            <p className="text-gray-500 dark:text-gray-400 mb-4 text-sm">
-              Enter the backend server URL to connect to.
-            </p>
-            <div className="relative mb-4">
-              <Server className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
-              <input
-                type="url"
-                value={serverUrl}
-                onChange={(e) => setServerUrl(e.target.value)}
-                placeholder="http://localhost:5000"
-                className="w-full pl-10 pr-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition-all"
-              />
+            
+            {/* Backend API URL */}
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Backend API URL
+              </label>
+              <div className="relative">
+                <Server className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
+                <input
+                  type="url"
+                  value={serverUrl}
+                  onChange={(e) => setServerUrl(e.target.value)}
+                  placeholder="http://localhost:5000"
+                  className="w-full pl-10 pr-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition-all"
+                />
+              </div>
             </div>
+            
+            {/* AI/OCR API URL */}
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                AI/OCR API URL
+              </label>
+              <div className="relative">
+                <Bot className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
+                <input
+                  type="url"
+                  value={aiServerUrl}
+                  onChange={(e) => setAiServerUrl(e.target.value)}
+                  placeholder="http://localhost:5001"
+                  className="w-full pl-10 pr-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition-all"
+                />
+              </div>
+            </div>
+            
             <button
               onClick={handleSaveServer}
               className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-medium transition-colors cursor-pointer"
             >
-              Save Server URL
+              Save Settings
             </button>
           </div>
         </div>

@@ -3,7 +3,9 @@
  */
 
 const DEFAULT_API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.fint.ngthav.xyz';
+const DEFAULT_AI_URL = process.env.NEXT_PUBLIC_AI_URL || 'http://localhost:5001';
 const API_URL_KEY = 'fint_api_url';
+const AI_URL_KEY = 'fint_ai_url';
 
 // Get/Set API URL
 export const getApiUrl = (): string => {
@@ -16,6 +18,18 @@ export const setApiUrl = (url: string): void => {
 };
 
 export const getDefaultApiUrl = (): string => DEFAULT_API_URL;
+
+// Get/Set AI API URL
+export const getAiUrl = (): string => {
+  if (typeof window === 'undefined') return DEFAULT_AI_URL;
+  return localStorage.getItem(AI_URL_KEY) || DEFAULT_AI_URL;
+};
+
+export const setAiUrl = (url: string): void => {
+  localStorage.setItem(AI_URL_KEY, url);
+};
+
+export const getDefaultAiUrl = (): string => DEFAULT_AI_URL;
 
 // Types
 export interface User {
@@ -265,5 +279,81 @@ export const usersApi = {
 export const healthApi = {
   async check(): Promise<{ status: string; timestamp: string }> {
     return apiRequest<{ status: string; timestamp: string }>('/api/health');
+  },
+};
+
+// ==================== OCR/AI API ====================
+
+export interface OCRResult {
+  success: boolean;
+  merchant?: string;
+  total?: number;
+  date?: string;
+  category?: string;
+  items?: { name: string; price: number }[];
+  raw_text?: string;
+  language?: string;
+  provider?: string;
+  error?: string;
+}
+
+export interface AIProviderInfo {
+  current_provider: string;
+  default_language: string;
+  provider_info: {
+    name: string;
+    type: string;
+    description: string;
+    requires_api_key: boolean;
+    supported_languages: string[];
+  };
+  available_providers: string[];
+}
+
+export const ocrApi = {
+  async scanReceipt(imageData: string, language: 'en' | 'km' = 'en'): Promise<OCRResult> {
+    const aiUrl = getAiUrl();
+    
+    const response = await fetch(`${aiUrl}/api/ocr/scan`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ image: imageData, language }),
+    });
+    
+    const data = await response.json();
+    
+    if (!response.ok) {
+      throw new Error(data.error || 'OCR request failed');
+    }
+    
+    return data;
+  },
+
+  async getProviderInfo(): Promise<AIProviderInfo> {
+    const aiUrl = getAiUrl();
+    
+    const response = await fetch(`${aiUrl}/api/ocr/provider`);
+    const data = await response.json();
+    
+    if (!response.ok) {
+      throw new Error(data.error || 'Failed to get provider info');
+    }
+    
+    return data;
+  },
+
+  async checkHealth(): Promise<{ status: string; service: string; timestamp: string }> {
+    const aiUrl = getAiUrl();
+    
+    const response = await fetch(`${aiUrl}/api/health`);
+    const data = await response.json();
+    
+    if (!response.ok) {
+      throw new Error(data.error || 'AI service health check failed');
+    }
+    
+    return data;
   },
 };
