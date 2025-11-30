@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { TrendingUp, TrendingDown, Receipt, DollarSign } from "lucide-react";
 import { useRouter } from "next/navigation";
 import Header from "./Header";
@@ -23,6 +24,8 @@ interface DashboardProps {
 
 export default function Dashboard({ receipts, onNavigateToSettings, userName = "User" }: DashboardProps) {
   const router = useRouter();
+  const [categoryFilter, setCategoryFilter] = useState<"all" | "month">("all");
+  
   const totalSpent = receipts.reduce((sum, r) => sum + r.amount, 0);
   const thisMonth = receipts.filter((r) => {
     const receiptDate = new Date(r.date);
@@ -31,7 +34,10 @@ export default function Dashboard({ receipts, onNavigateToSettings, userName = "
   });
   const monthlySpent = thisMonth.reduce((sum, r) => sum + r.amount, 0);
 
-  const categories = receipts.reduce((acc, r) => {
+  // Filter receipts based on selected filter for pie chart
+  const filteredForChart = categoryFilter === "month" ? thisMonth : receipts;
+
+  const categories = filteredForChart.reduce((acc, r) => {
     acc[r.category] = (acc[r.category] || 0) + r.amount;
     return acc;
   }, {} as Record<string, number>);
@@ -117,11 +123,35 @@ export default function Dashboard({ receipts, onNavigateToSettings, userName = "
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
         {/* Pie Chart Section */}
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Spending by Category</h2>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Spending by Category</h2>
+            <div className="flex gap-1 bg-gray-100 dark:bg-gray-700 rounded-lg p-1">
+              <button
+                onClick={() => setCategoryFilter("all")}
+                className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${
+                  categoryFilter === "all"
+                    ? "bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow-sm"
+                    : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
+                }`}
+              >
+                All Time
+              </button>
+              <button
+                onClick={() => setCategoryFilter("month")}
+                className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${
+                  categoryFilter === "month"
+                    ? "bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow-sm"
+                    : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
+                }`}
+              >
+                This Month
+              </button>
+            </div>
+          </div>
           {pieChartData.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 text-gray-500 dark:text-gray-400">
               <DollarSign className="mb-4 opacity-50" size={48} />
-              <p>No spending data yet</p>
+              <p>No spending data {categoryFilter === "month" ? "this month" : "yet"}</p>
             </div>
           ) : (
             <div className="flex flex-col items-center">
