@@ -534,30 +534,6 @@ export default function AddReceiptModal({
                 />
               </div>
 
-              {/* Detected items from OCR */}
-              {ocrResult?.items && ocrResult.items.length > 0 && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Detected Items
-                  </label>
-                  <div className="bg-gray-50 dark:bg-gray-700/50 rounded-xl p-3 max-h-32 overflow-y-auto">
-                    {ocrResult.items.map((item, index) => (
-                      <div
-                        key={index}
-                        className="flex justify-between text-sm py-1"
-                      >
-                        <span className="text-gray-600 dark:text-gray-400">
-                          {item.name}
-                        </span>
-                        <span className="text-gray-900 dark:text-white font-medium">
-                          ${item.price.toFixed(2)}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
               <div className="flex gap-3 pt-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
                 <button
                   type="button"

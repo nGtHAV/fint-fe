@@ -190,29 +190,29 @@ export const receiptsApi = {
     if (params?.limit) searchParams.append('limit', params.limit.toString());
 
     const query = searchParams.toString();
-    return apiRequest<{ receipts: Receipt[] }>(`/api/receipts${query ? `?${query}` : ''}`);
+    return apiRequest<{ receipts: Receipt[] }>(`/api/receipts/${query ? `?${query}` : ''}`);
   },
 
   async getById(id: number): Promise<{ receipt: Receipt }> {
-    return apiRequest<{ receipt: Receipt }>(`/api/receipts/${id}`);
+    return apiRequest<{ receipt: Receipt }>(`/api/receipts/${id}/`);
   },
 
   async create(data: CreateReceiptData): Promise<{ receipt: Receipt }> {
-    return apiRequest<{ receipt: Receipt }>('/api/receipts', {
+    return apiRequest<{ receipt: Receipt }>('/api/receipts/', {
       method: 'POST',
       body: JSON.stringify(data),
     });
   },
 
   async update(id: number, data: Partial<CreateReceiptData>): Promise<{ receipt: Receipt }> {
-    return apiRequest<{ receipt: Receipt }>(`/api/receipts/${id}`, {
+    return apiRequest<{ receipt: Receipt }>(`/api/receipts/${id}/`, {
       method: 'PUT',
       body: JSON.stringify(data),
     });
   },
 
   async delete(id: number): Promise<{ message: string }> {
-    return apiRequest<{ message: string }>(`/api/receipts/${id}`, {
+    return apiRequest<{ message: string }>(`/api/receipts/${id}/`, {
       method: 'DELETE',
     });
   },

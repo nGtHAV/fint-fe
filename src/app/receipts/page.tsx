@@ -135,17 +135,9 @@ export default function ReceiptsPage() {
                 className="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm border border-gray-200 dark:border-gray-700"
               >
                 <div className="flex items-center gap-4">
-                  {receipt.image_url ? (
-                    <img
-                      src={receipt.image_url}
-                      alt={receipt.name}
-                      className="w-14 h-14 rounded-lg object-cover"
-                    />
-                  ) : (
-                    <div className="w-14 h-14 bg-gray-100 dark:bg-gray-700 rounded-lg flex items-center justify-center">
-                      <Receipt className="w-6 h-6 text-gray-400" />
-                    </div>
-                  )}
+                  <div className="w-14 h-14 bg-emerald-100 dark:bg-emerald-900/30 rounded-lg flex items-center justify-center">
+                    <Receipt className="w-6 h-6 text-emerald-600 dark:text-emerald-400" />
+                  </div>
                   <div className="flex-1 min-w-0">
                     <p className="font-medium text-gray-900 dark:text-white truncate">{receipt.name}</p>
                     <p className="text-sm text-gray-500 dark:text-gray-400">{receipt.category}</p>

@@ -161,17 +161,9 @@ export default function Dashboard({ receipts, onNavigateToSettings, userName = "
             ) : (
               receipts.slice(0, 5).map((receipt) => (
                 <div key={receipt.id} className="p-4 flex items-center gap-4 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
-                  {receipt.imageUrl ? (
-                    <img
-                      src={receipt.imageUrl}
-                      alt={receipt.name}
-                      className="w-12 h-12 rounded-lg object-cover"
-                    />
-                  ) : (
-                    <div className="w-12 h-12 bg-gray-100 dark:bg-gray-700 rounded-lg flex items-center justify-center">
-                      <Receipt className="text-gray-400" size={20} />
-                    </div>
-                  )}
+                  <div className="w-12 h-12 bg-emerald-100 dark:bg-emerald-900/30 rounded-lg flex items-center justify-center">
+                    <Receipt className="text-emerald-600 dark:text-emerald-400" size={20} />
+                  </div>
                   <div className="flex-1 min-w-0">
                     <p className="font-medium text-gray-900 dark:text-white truncate">{receipt.name}</p>
                     <p className="text-sm text-gray-500 dark:text-gray-400">{receipt.category}</p>
