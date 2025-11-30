@@ -314,21 +314,36 @@ export const ocrApi = {
   async scanReceipt(imageData: string, language: 'en' | 'km' = 'en'): Promise<OCRResult> {
     const aiUrl = getAiUrl();
     
-    const response = await fetch(`${aiUrl}/api/ocr/scan`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ image: imageData, language }),
-    });
-    
-    const data = await response.json();
-    
-    if (!response.ok) {
-      throw new Error(data.error || 'OCR request failed');
+    try {
+      const response = await fetch(`${aiUrl}/api/ocr/scan`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ image: imageData, language }),
+      });
+      
+      // Check if response is JSON
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        const text = await response.text();
+        console.error('Non-JSON response from AI service:', text.substring(0, 200));
+        throw new Error('AI service returned an invalid response. Please check if the service is running.');
+      }
+      
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.error || 'OCR request failed');
+      }
+      
+      return data;
+    } catch (error) {
+      if (error instanceof TypeError && error.message.includes('fetch')) {
+        throw new Error('Cannot connect to AI service. Please check your network connection.');
+      }
+      throw error;
     }
-    
-    return data;
   },
 
   async getProviderInfo(): Promise<AIProviderInfo> {
