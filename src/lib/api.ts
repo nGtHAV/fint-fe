@@ -241,8 +241,8 @@ export const receiptsApi = {
     return apiRequest<{ receipt: Receipt }>(`/api/receipts/${id}/`);
   },
 
-  async create(data: CreateReceiptData): Promise<{ receipt: Receipt }> {
-    return apiRequest<{ receipt: Receipt }>('/api/receipts/', {
+  async create(data: CreateReceiptData): Promise<{ receipt: Receipt; budget_alerts?: BudgetAlert[] }> {
+    return apiRequest<{ receipt: Receipt; budget_alerts?: BudgetAlert[] }>('/api/receipts/', {
       method: 'POST',
       body: JSON.stringify(data),
     });
@@ -352,9 +352,21 @@ export const budgetsApi = {
   },
 
   async delete(id: number): Promise<void> {
-    return apiRequest<void>(`/api/budgets/${id}/`, {
+    const token = getToken();
+    const apiUrl = getApiUrl();
+    
+    const response = await fetch(`${apiUrl}/api/budgets/${id}/`, {
       method: 'DELETE',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
     });
+    
+    if (!response.ok && response.status !== 204) {
+      const data = await response.json();
+      throw new Error(data.error || 'Failed to delete budget');
+    }
   },
 
   async getSummary(): Promise<BudgetSummary> {
@@ -382,7 +394,7 @@ export const budgetsApi = {
 
 export const exportApi = {
   async exportReceipts(params?: {
-    format?: 'csv' | 'json';
+    format?: 'csv' | 'pdf' | 'json';
     start_date?: string;
     end_date?: string;
     category?: string;
@@ -405,11 +417,27 @@ export const exportApi = {
     });
     
     if (!response.ok) {
-      const data = await response.json();
-      throw new Error(data.error || 'Export failed');
+      // Try to get error message from JSON if possible
+      try {
+        const data = await response.json();
+        throw new Error(data.error || 'Export failed');
+      } catch {
+        throw new Error('Export failed');
+      }
     }
     
     return response.blob();
+  },
+
+  downloadBlob(blob: Blob, filename: string): void {
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    window.URL.revokeObjectURL(url);
+    document.body.removeChild(a);
   },
 };
 

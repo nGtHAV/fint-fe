@@ -21,7 +21,10 @@ import {
   Calendar,
   Wallet,
   Tags,
-  CheckCircle
+  CheckCircle,
+  X,
+  FileText,
+  FileSpreadsheet
 } from "lucide-react";
 import ComingSoonModal from "./ComingSoonModal";
 import { useTheme } from "./ThemeProvider";
@@ -35,7 +38,11 @@ export default function Settings() {
   const [notifications, setNotifications] = useState(true);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showExportModal, setShowExportModal] = useState(false);
-  const [exportFormat] = useState<"csv" | "json">("csv");
+  const [exportFormat, setExportFormat] = useState<"csv" | "pdf">("csv");
+  const [exportTimeframe, setExportTimeframe] = useState<"all" | "month" | "week" | "custom">("all");
+  const [customStartDate, setCustomStartDate] = useState("");
+  const [customEndDate, setCustomEndDate] = useState("");
+  const [exportLoading, setExportLoading] = useState(false);
   const [exportSuccess, setExportSuccess] = useState(false);
   const [showComingSoon, setShowComingSoon] = useState(false);
   const [comingSoonFeature, setComingSoonFeature] = useState("");
@@ -99,29 +106,61 @@ export default function Settings() {
     }
   };
 
+  const getExportDates = () => {
+    const today = new Date();
+    let start_date: string | undefined;
+    let end_date: string | undefined;
+    
+    switch (exportTimeframe) {
+      case "week":
+        const weekAgo = new Date(today);
+        weekAgo.setDate(today.getDate() - 7);
+        start_date = weekAgo.toISOString().split('T')[0];
+        end_date = today.toISOString().split('T')[0];
+        break;
+      case "month":
+        const monthAgo = new Date(today);
+        monthAgo.setMonth(today.getMonth() - 1);
+        start_date = monthAgo.toISOString().split('T')[0];
+        end_date = today.toISOString().split('T')[0];
+        break;
+      case "custom":
+        start_date = customStartDate || undefined;
+        end_date = customEndDate || undefined;
+        break;
+      default:
+        // All time - no date filter
+        break;
+    }
+    
+    return { start_date, end_date };
+  };
+
   const handleExportData = async () => {
-    const format = exportFormat;
-    setShowExportModal(true);
+    setExportLoading(true);
     setExportSuccess(false);
     
     try {
-      const blob = await exportApi.exportReceipts({ format });
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `fint-receipts.${format}`;
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
+      const { start_date, end_date } = getExportDates();
+      const blob = await exportApi.exportReceipts({ 
+        format: exportFormat, 
+        start_date, 
+        end_date 
+      });
+      
+      const timestamp = new Date().toISOString().split('T')[0];
+      const filename = `fint-receipts-${timestamp}.${exportFormat}`;
+      exportApi.downloadBlob(blob, filename);
+      
       setExportSuccess(true);
       setTimeout(() => {
         setShowExportModal(false);
         setExportSuccess(false);
+        setExportLoading(false);
       }, 1500);
     } catch (error) {
       console.error("Export failed:", error);
-      setShowExportModal(false);
+      setExportLoading(false);
     }
   };
 
@@ -164,7 +203,7 @@ export default function Settings() {
     {
       title: "Data & Privacy",
       items: [
-        { icon: Download, label: "Export Data", description: "Download your financial data", action: handleExportData },
+        { icon: Download, label: "Export Data", description: "Download your financial data", action: () => setShowExportModal(true) },
         { icon: Shield, label: "Privacy Settings", description: "Manage your data and security", action: () => showComingSoonModal("Privacy Settings") },
         { icon: Smartphone, label: "Connected Devices", description: "Manage logged in devices", action: () => showComingSoonModal("Connected Devices") },
       ],
@@ -363,31 +402,142 @@ export default function Settings() {
       {/* Export Data Modal */}
       {showExportModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
-          <div className="relative bg-white dark:bg-gray-800 rounded-2xl shadow-xl w-full max-w-sm animate-scale-in p-6">
-            <div className="text-center">
-              {exportSuccess ? (
-                <>
-                  <div className="w-16 h-16 bg-emerald-100 dark:bg-emerald-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <CheckCircle className="w-8 h-8 text-emerald-600 dark:text-emerald-400" />
+          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => !exportLoading && setShowExportModal(false)} />
+          <div className="relative bg-white dark:bg-gray-800 rounded-2xl shadow-xl w-full max-w-md animate-scale-in p-6">
+            {exportSuccess ? (
+              <div className="text-center">
+                <div className="w-16 h-16 bg-emerald-100 dark:bg-emerald-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <CheckCircle className="w-8 h-8 text-emerald-600 dark:text-emerald-400" />
+                </div>
+                <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2">Export Complete!</h2>
+                <p className="text-gray-500 dark:text-gray-400">
+                  Your {exportFormat.toUpperCase()} file has been downloaded.
+                </p>
+              </div>
+            ) : exportLoading ? (
+              <div className="text-center">
+                <div className="w-16 h-16 bg-emerald-100 dark:bg-emerald-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <div className="w-8 h-8 border-4 border-emerald-600 dark:border-emerald-400 border-t-transparent rounded-full animate-spin" />
+                </div>
+                <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2">Exporting Data...</h2>
+                <p className="text-gray-500 dark:text-gray-400">
+                  Please wait while we prepare your {exportFormat.toUpperCase()} file.
+                </p>
+              </div>
+            ) : (
+              <>
+                <div className="flex items-center justify-between mb-6">
+                  <h2 className="text-xl font-bold text-gray-900 dark:text-white">Export Receipts</h2>
+                  <button
+                    onClick={() => setShowExportModal(false)}
+                    className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                  >
+                    <X className="w-5 h-5 text-gray-500" />
+                  </button>
+                </div>
+
+                {/* Format Selection */}
+                <div className="mb-6">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
+                    Export Format
+                  </label>
+                  <div className="grid grid-cols-2 gap-3">
+                    <button
+                      onClick={() => setExportFormat("csv")}
+                      className={`p-4 rounded-xl border-2 flex flex-col items-center gap-2 transition-all ${
+                        exportFormat === "csv"
+                          ? "border-emerald-500 bg-emerald-50 dark:bg-emerald-900/20"
+                          : "border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600"
+                      }`}
+                    >
+                      <FileSpreadsheet className={`w-8 h-8 ${exportFormat === "csv" ? "text-emerald-600" : "text-gray-400"}`} />
+                      <span className={`font-medium ${exportFormat === "csv" ? "text-emerald-600 dark:text-emerald-400" : "text-gray-700 dark:text-gray-300"}`}>
+                        CSV
+                      </span>
+                      <span className="text-xs text-gray-500 dark:text-gray-400">Spreadsheet</span>
+                    </button>
+                    <button
+                      onClick={() => setExportFormat("pdf")}
+                      className={`p-4 rounded-xl border-2 flex flex-col items-center gap-2 transition-all ${
+                        exportFormat === "pdf"
+                          ? "border-emerald-500 bg-emerald-50 dark:bg-emerald-900/20"
+                          : "border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600"
+                      }`}
+                    >
+                      <FileText className={`w-8 h-8 ${exportFormat === "pdf" ? "text-emerald-600" : "text-gray-400"}`} />
+                      <span className={`font-medium ${exportFormat === "pdf" ? "text-emerald-600 dark:text-emerald-400" : "text-gray-700 dark:text-gray-300"}`}>
+                        PDF
+                      </span>
+                      <span className="text-xs text-gray-500 dark:text-gray-400">Document</span>
+                    </button>
                   </div>
-                  <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2">Export Complete!</h2>
-                  <p className="text-gray-500 dark:text-gray-400">
-                    Your {exportFormat.toUpperCase()} file has been downloaded.
-                  </p>
-                </>
-              ) : (
-                <>
-                  <div className="w-16 h-16 bg-emerald-100 dark:bg-emerald-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <div className="w-8 h-8 border-4 border-emerald-600 dark:border-emerald-400 border-t-transparent rounded-full animate-spin" />
+                </div>
+
+                {/* Timeframe Selection */}
+                <div className="mb-6">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
+                    Time Period
+                  </label>
+                  <div className="grid grid-cols-2 gap-2">
+                    {[
+                      { value: "all", label: "All Time" },
+                      { value: "month", label: "Last Month" },
+                      { value: "week", label: "Last Week" },
+                      { value: "custom", label: "Custom" },
+                    ].map((option) => (
+                      <button
+                        key={option.value}
+                        onClick={() => setExportTimeframe(option.value as typeof exportTimeframe)}
+                        className={`py-2 px-4 rounded-lg text-sm font-medium transition-all ${
+                          exportTimeframe === option.value
+                            ? "bg-emerald-500 text-white"
+                            : "bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600"
+                        }`}
+                      >
+                        {option.label}
+                      </button>
+                    ))}
                   </div>
-                  <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2">Exporting Data...</h2>
-                  <p className="text-gray-500 dark:text-gray-400">
-                    Please wait while we prepare your {exportFormat.toUpperCase()} file for download.
-                  </p>
-                </>
-              )}
-            </div>
+                </div>
+
+                {/* Custom Date Range */}
+                {exportTimeframe === "custom" && (
+                  <div className="mb-6 grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
+                        From
+                      </label>
+                      <input
+                        type="date"
+                        value={customStartDate}
+                        onChange={(e) => setCustomStartDate(e.target.value)}
+                        className="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
+                        To
+                      </label>
+                      <input
+                        type="date"
+                        value={customEndDate}
+                        onChange={(e) => setCustomEndDate(e.target.value)}
+                        className="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {/* Export Button */}
+                <button
+                  onClick={handleExportData}
+                  className="w-full py-3 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl font-medium transition-colors flex items-center justify-center gap-2"
+                >
+                  <Download className="w-5 h-5" />
+                  Export {exportFormat.toUpperCase()}
+                </button>
+              </>
+            )}
           </div>
         </div>
       )}

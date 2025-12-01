@@ -1,10 +1,19 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 
 interface PieChartProps {
   data: { category: string; amount: number; color: string }[];
   size?: number;
+}
+
+interface Segment {
+  category: string;
+  amount: number;
+  color: string;
+  percent: number;
+  startAngle: number;
+  endAngle: number;
 }
 
 export default function PieChart({ data, size = 200 }: PieChartProps) {
@@ -17,6 +26,45 @@ export default function PieChart({ data, size = 200 }: PieChartProps) {
   const total = data.reduce((sum, item) => sum + item.amount, 0);
   const radius = size / 2;
   const innerRadius = radius * 0.6;
+  
+  // Calculate segments using reduce to avoid reassignment
+  const segments: Segment[] = useMemo(() => {
+    if (data.length <= 1) return [];
+    
+    const result: Segment[] = [];
+    let cumulative = 0;
+    
+    for (const item of data) {
+      const percent = (item.amount / total) * 100;
+      const startAngle = cumulative * 3.6;
+      cumulative += percent;
+      const endAngle = cumulative * 3.6;
+      
+      result.push({
+        ...item,
+        percent,
+        startAngle,
+        endAngle,
+      });
+    }
+    
+    return result;
+  }, [data, total]);
+  
+  // Create SVG path for each segment
+  const createArcPath = (startAngle: number, endAngle: number, r: number) => {
+    const startRad = ((startAngle - 90) * Math.PI) / 180;
+    const endRad = ((endAngle - 90) * Math.PI) / 180;
+    
+    const x1 = Math.round((r + r * Math.cos(startRad)) * 1000) / 1000;
+    const y1 = Math.round((r + r * Math.sin(startRad)) * 1000) / 1000;
+    const x2 = Math.round((r + r * Math.cos(endRad)) * 1000) / 1000;
+    const y2 = Math.round((r + r * Math.sin(endRad)) * 1000) / 1000;
+    
+    const largeArcFlag = endAngle - startAngle > 180 ? 1 : 0;
+    
+    return `M ${r} ${r} L ${x1} ${y1} A ${r} ${r} 0 ${largeArcFlag} 1 ${x2} ${y2} Z`;
+  };
   
   if (total === 0) {
     return (
@@ -40,36 +88,40 @@ export default function PieChart({ data, size = 200 }: PieChartProps) {
     );
   }
 
-  // Calculate the segments
-  let cumulativePercent = 0;
-  const segments = data.map((item) => {
-    const percent = (item.amount / total) * 100;
-    const startAngle = cumulativePercent * 3.6; // Convert to degrees
-    cumulativePercent += percent;
-    const endAngle = cumulativePercent * 3.6;
-    
-    return {
-      ...item,
-      percent,
-      startAngle,
-      endAngle,
-    };
-  });
-
-  // Create SVG path for each segment (with rounded values to avoid precision issues)
-  const createArcPath = (startAngle: number, endAngle: number, r: number) => {
-    const startRad = ((startAngle - 90) * Math.PI) / 180;
-    const endRad = ((endAngle - 90) * Math.PI) / 180;
-    
-    const x1 = Math.round((r + r * Math.cos(startRad)) * 1000) / 1000;
-    const y1 = Math.round((r + r * Math.sin(startRad)) * 1000) / 1000;
-    const x2 = Math.round((r + r * Math.cos(endRad)) * 1000) / 1000;
-    const y2 = Math.round((r + r * Math.sin(endRad)) * 1000) / 1000;
-    
-    const largeArcFlag = endAngle - startAngle > 180 ? 1 : 0;
-    
-    return `M ${r} ${r} L ${x1} ${y1} A ${r} ${r} 0 ${largeArcFlag} 1 ${x2} ${y2} Z`;
-  };
+  // Special case: only one category - render a full circle
+  if (data.length === 1) {
+    return (
+      <div className="relative" style={{ width: size, height: size }}>
+        <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
+          {/* Full circle for single category */}
+          <circle
+            cx={radius}
+            cy={radius}
+            r={radius}
+            fill={data[0].color}
+            className="transition-all duration-300"
+          />
+          {/* Inner circle for donut effect */}
+          <circle
+            cx={radius}
+            cy={radius}
+            r={innerRadius}
+            className="fill-white dark:fill-gray-800"
+          />
+        </svg>
+        {/* Center text */}
+        <div 
+          className="absolute inset-0 flex flex-col items-center justify-center"
+          style={{ pointerEvents: "none" }}
+        >
+          <span className="text-2xl font-bold text-gray-900 dark:text-white">
+            ${total.toFixed(0)}
+          </span>
+          <span className="text-xs text-gray-500 dark:text-gray-400">Total</span>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="relative" style={{ width: size, height: size }}>
