@@ -82,9 +82,23 @@ export default function LoginPage() {
 
   const handleForgotPassword = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Simulate sending reset email
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-    setResetSent(true);
+    setIsLoading(true);
+    try {
+      const apiUrl = getApiUrl();
+      await fetch(`${apiUrl}/api/auth/forgot-password`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: resetEmail }),
+      });
+      
+      // Always show success regardless of whether email exists (security)
+      setResetSent(true);
+    } catch (err) {
+      console.error("Password reset request failed:", err);
+      setResetSent(true); // Still show success for security
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleSocialLogin = (provider: string) => {

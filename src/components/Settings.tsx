@@ -18,11 +18,14 @@ import {
   ChevronRight,
   Camera,
   Mail,
-  Calendar
+  Calendar,
+  Wallet,
+  Tags,
+  CheckCircle
 } from "lucide-react";
 import ComingSoonModal from "./ComingSoonModal";
 import { useTheme } from "./ThemeProvider";
-import { authApi, statsApi, usersApi, getStoredUser, User as UserType } from "@/lib/api";
+import { authApi, statsApi, usersApi, exportApi, getStoredUser, User as UserType } from "@/lib/api";
 import Image from "next/image";
 
 export default function Settings() {
@@ -32,6 +35,8 @@ export default function Settings() {
   const [notifications, setNotifications] = useState(true);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showExportModal, setShowExportModal] = useState(false);
+  const [exportFormat] = useState<"csv" | "json">("csv");
+  const [exportSuccess, setExportSuccess] = useState(false);
   const [showComingSoon, setShowComingSoon] = useState(false);
   const [comingSoonFeature, setComingSoonFeature] = useState("");
   const [selectedLanguage] = useState("English (US)");
@@ -94,12 +99,30 @@ export default function Settings() {
     }
   };
 
-  const handleExportData = () => {
+  const handleExportData = async () => {
+    const format = exportFormat;
     setShowExportModal(true);
-    // Simulate export
-    setTimeout(() => {
+    setExportSuccess(false);
+    
+    try {
+      const blob = await exportApi.exportReceipts({ format });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `fint-receipts.${format}`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+      setExportSuccess(true);
+      setTimeout(() => {
+        setShowExportModal(false);
+        setExportSuccess(false);
+      }, 1500);
+    } catch (error) {
+      console.error("Export failed:", error);
       setShowExportModal(false);
-    }, 2000);
+    }
   };
 
   const showComingSoonModal = (feature: string) => {
@@ -121,6 +144,13 @@ export default function Settings() {
         { icon: Mail, label: "Email Settings", description: "Manage email preferences", action: () => showComingSoonModal("Email Settings") },
         { icon: CreditCard, label: "Payment Methods", description: "Add or remove payment options", action: () => showComingSoonModal("Payment Methods") },
         { icon: Bell, label: "Notifications", description: notifications ? "Notifications are enabled" : "Notifications are disabled", toggle: true, value: notifications, onToggle: () => setNotifications(!notifications) },
+      ],
+    },
+    {
+      title: "Budget & Categories",
+      items: [
+        { icon: Wallet, label: "Budget Settings", description: "Set daily, weekly, monthly limits", hasArrow: true, action: () => router.push("/budget") },
+        { icon: Tags, label: "Custom Categories", description: "Create and manage categories", hasArrow: true, action: () => router.push("/categories") },
       ],
     },
     {
@@ -336,13 +366,27 @@ export default function Settings() {
           <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
           <div className="relative bg-white dark:bg-gray-800 rounded-2xl shadow-xl w-full max-w-sm animate-scale-in p-6">
             <div className="text-center">
-              <div className="w-16 h-16 bg-emerald-100 dark:bg-emerald-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
-                <div className="w-8 h-8 border-4 border-emerald-600 dark:border-emerald-400 border-t-transparent rounded-full animate-spin" />
-              </div>
-              <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2">Exporting Data...</h2>
-              <p className="text-gray-500 dark:text-gray-400">
-                Please wait while we prepare your data for download.
-              </p>
+              {exportSuccess ? (
+                <>
+                  <div className="w-16 h-16 bg-emerald-100 dark:bg-emerald-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <CheckCircle className="w-8 h-8 text-emerald-600 dark:text-emerald-400" />
+                  </div>
+                  <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2">Export Complete!</h2>
+                  <p className="text-gray-500 dark:text-gray-400">
+                    Your {exportFormat.toUpperCase()} file has been downloaded.
+                  </p>
+                </>
+              ) : (
+                <>
+                  <div className="w-16 h-16 bg-emerald-100 dark:bg-emerald-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <div className="w-8 h-8 border-4 border-emerald-600 dark:border-emerald-400 border-t-transparent rounded-full animate-spin" />
+                  </div>
+                  <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2">Exporting Data...</h2>
+                  <p className="text-gray-500 dark:text-gray-400">
+                    Please wait while we prepare your {exportFormat.toUpperCase()} file for download.
+                  </p>
+                </>
+              )}
             </div>
           </div>
         </div>

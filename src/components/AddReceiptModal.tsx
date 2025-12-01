@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import {
   X,
   Camera,
@@ -13,7 +13,7 @@ import {
   ImageIcon,
 } from "lucide-react";
 import Image from "next/image";
-import { ocrApi, OCRResult } from "@/lib/api";
+import { ocrApi, OCRResult, categoriesApi, Category } from "@/lib/api";
 
 interface AddReceiptModalProps {
   isOpen: boolean;
@@ -45,20 +45,36 @@ export default function AddReceiptModal({
   const [processingError, setProcessingError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [ocrResult, setOcrResult] = useState<OCRResult | null>(null);
+  const [categories, setCategories] = useState<Category[]>([]);
 
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const galleryInputRef = useRef<HTMLInputElement>(null);
 
-  const categories = [
-    "Food & Dining",
-    "Shopping",
-    "Transportation",
-    "Entertainment",
-    "Bills & Utilities",
-    "Healthcare",
-    "Education",
-    "Other",
-  ];
+  // Load categories
+  useEffect(() => {
+    const loadCategories = async () => {
+      try {
+        const data = await categoriesApi.getAll();
+        setCategories(data);
+      } catch (error) {
+        console.error("Failed to load categories:", error);
+        // Fallback to default categories
+        setCategories([
+          { id: null, name: "Food & Dining", icon: "utensils", color: "orange" },
+          { id: null, name: "Shopping", icon: "shopping-bag", color: "pink" },
+          { id: null, name: "Transportation", icon: "car", color: "blue" },
+          { id: null, name: "Entertainment", icon: "film", color: "purple" },
+          { id: null, name: "Bills & Utilities", icon: "file-text", color: "gray" },
+          { id: null, name: "Healthcare", icon: "heart", color: "red" },
+          { id: null, name: "Education", icon: "book", color: "indigo" },
+          { id: null, name: "Other", icon: "more-horizontal", color: "gray", is_other: true },
+        ]);
+      }
+    };
+    if (isOpen) {
+      loadCategories();
+    }
+  }, [isOpen]);
 
   // Handle file selection (from camera or gallery)
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -511,9 +527,10 @@ export default function AddReceiptModal({
                   }
                   className="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition-all"
                 >
-                  {categories.map((cat) => (
-                    <option key={cat} value={cat}>
-                      {cat}
+                  {categories.map((cat, index) => (
+                    <option key={cat.id || `cat-${index}`} value={cat.name}>
+                      {cat.name}
+                      {cat.is_custom && " ★"}
                     </option>
                   ))}
                 </select>

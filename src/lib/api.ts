@@ -54,10 +54,54 @@ export interface Receipt {
 }
 
 export interface Category {
-  id: number;
+  id: number | null;
   name: string;
   icon: string;
   color: string;
+  is_custom?: boolean;
+  is_other?: boolean;
+  created_at?: string;
+}
+
+export interface Budget {
+  id: number;
+  user_id: number;
+  period: 'daily' | 'weekly' | 'monthly';
+  amount: number;
+  category: string | null;
+  is_active: boolean;
+  alert_threshold: number;
+  current_spent?: number;
+  percentage?: number;
+  created_at?: string;
+}
+
+export interface BudgetAlert {
+  id: number;
+  budget_id: number;
+  alert_type: 'warning' | 'exceeded';
+  message: string;
+  current_spent: number;
+  is_read: boolean;
+  created_at?: string;
+}
+
+export interface BudgetSummary {
+  budgets: {
+    daily: BudgetStatus | null;
+    weekly: BudgetStatus | null;
+    monthly: BudgetStatus | null;
+  };
+  unread_alerts: number;
+}
+
+export interface BudgetStatus {
+  budget: number;
+  spent: number;
+  remaining: number;
+  percentage: number;
+  alert_threshold: number;
+  status: 'ok' | 'warning' | 'exceeded';
 }
 
 export interface AuthResponse {
@@ -245,8 +289,127 @@ export const statsApi = {
 // ==================== CATEGORIES API ====================
 
 export const categoriesApi = {
-  async getAll(): Promise<{ categories: Category[] }> {
-    return apiRequest<{ categories: Category[] }>('/api/categories');
+  async getAll(): Promise<Category[]> {
+    return apiRequest<Category[]>('/api/categories/');
+  },
+
+  async createCustom(data: { name: string; icon?: string; color?: string }): Promise<Category> {
+    return apiRequest<Category>('/api/categories/custom/', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  async updateCustom(id: number, data: { name?: string; icon?: string; color?: string }): Promise<Category> {
+    return apiRequest<Category>(`/api/categories/custom/${id}/`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  },
+
+  async deleteCustom(id: number, migrateToCategory?: string): Promise<{ message: string }> {
+    return apiRequest<{ message: string }>(`/api/categories/custom/${id}/`, {
+      method: 'DELETE',
+      body: JSON.stringify({ migrate_to: migrateToCategory }),
+    });
+  },
+
+  async migrateReceipts(id: number, migrateToCategory: string): Promise<{ message: string; count: number }> {
+    return apiRequest<{ message: string; count: number }>(`/api/categories/custom/${id}/migrate/`, {
+      method: 'POST',
+      body: JSON.stringify({ migrate_to: migrateToCategory }),
+    });
+  },
+
+  async getReceiptCount(id: number): Promise<{ category: string; receipt_count: number }> {
+    return apiRequest<{ category: string; receipt_count: number }>(`/api/categories/custom/${id}/count/`);
+  },
+};
+
+// ==================== BUDGETS API ====================
+
+export const budgetsApi = {
+  async getAll(): Promise<Budget[]> {
+    return apiRequest<Budget[]>('/api/budgets/');
+  },
+
+  async create(data: { period: string; amount: number; category?: string; alert_threshold?: number }): Promise<Budget> {
+    return apiRequest<Budget>('/api/budgets/', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  async getById(id: number): Promise<Budget> {
+    return apiRequest<Budget>(`/api/budgets/${id}/`);
+  },
+
+  async update(id: number, data: { amount?: number; alert_threshold?: number; is_active?: boolean }): Promise<Budget> {
+    return apiRequest<Budget>(`/api/budgets/${id}/`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  },
+
+  async delete(id: number): Promise<void> {
+    return apiRequest<void>(`/api/budgets/${id}/`, {
+      method: 'DELETE',
+    });
+  },
+
+  async getSummary(): Promise<BudgetSummary> {
+    return apiRequest<BudgetSummary>('/api/budgets/summary/');
+  },
+
+  async getAlerts(): Promise<BudgetAlert[]> {
+    return apiRequest<BudgetAlert[]>('/api/budgets/alerts/');
+  },
+
+  async markAlertRead(alertId: number): Promise<BudgetAlert> {
+    return apiRequest<BudgetAlert>(`/api/budgets/alerts/${alertId}/read/`, {
+      method: 'POST',
+    });
+  },
+
+  async markAllAlertsRead(): Promise<{ message: string }> {
+    return apiRequest<{ message: string }>('/api/budgets/alerts/read-all/', {
+      method: 'POST',
+    });
+  },
+};
+
+// ==================== EXPORT API ====================
+
+export const exportApi = {
+  async exportReceipts(params?: {
+    format?: 'csv' | 'json';
+    start_date?: string;
+    end_date?: string;
+    category?: string;
+  }): Promise<Blob> {
+    const token = getToken();
+    const apiUrl = getApiUrl();
+    
+    const searchParams = new URLSearchParams();
+    if (params?.format) searchParams.append('format', params.format);
+    if (params?.start_date) searchParams.append('start_date', params.start_date);
+    if (params?.end_date) searchParams.append('end_date', params.end_date);
+    if (params?.category) searchParams.append('category', params.category);
+    
+    const query = searchParams.toString();
+    
+    const response = await fetch(`${apiUrl}/api/receipts/export/${query ? `?${query}` : ''}`, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+    });
+    
+    if (!response.ok) {
+      const data = await response.json();
+      throw new Error(data.error || 'Export failed');
+    }
+    
+    return response.blob();
   },
 };
 
